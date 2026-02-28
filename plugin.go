@@ -43,6 +43,8 @@ func (p *SystemPlugin) OnReady() {
 	go p.tickLoop()
 }
 
+func (p *SystemPlugin) OnShutdown() {}
+
 func (p *SystemPlugin) OnHealthCheck() (string, error) { return "perfect", nil }
 
 func (p *SystemPlugin) OnStorageUpdate(current types.Storage) (types.Storage, error) {
