@@ -60,7 +60,7 @@ func (p *SystemPlugin) OnDevicesList(current []types.Device) ([]types.Device, er
 	for _, d := range current {
 		byID[d.ID] = d
 	}
-	byID[systemDeviceID] = runner.ReconcileDevice(existing, types.Device{
+	byID[systemDeviceID] = runner.ReconcileDevice(byID[systemDeviceID], types.Device{
 		ID:         systemDeviceID,
 		SourceID:   systemDeviceID,
 		SourceName: "System",
