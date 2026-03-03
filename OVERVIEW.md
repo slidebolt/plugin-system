@@ -27,3 +27,14 @@ The plugin runs a loop that periodically emits events with the latest values for
 #### Available Commands
 
 This plugin is not intended to be run directly by the user. It is a component that is automatically loaded and managed by the Slidebolt system.
+
+#### Standalone Discovery Mode
+
+This plugin supports a standalone discovery mode for rapid testing and diagnostics without requiring the full Slidebolt stack (NATS, Gateway, etc.).
+
+To run discovery and output the results to JSON:
+```bash
+./plugin-system -discover
+```
+
+**Note**: Ensure any required environment variables (e.g., API keys, URLs) are set before running.

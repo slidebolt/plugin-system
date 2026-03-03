@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -41,6 +42,10 @@ func (p *SystemPlugin) OnInitialize(config runner.Config, state types.Storage) (
 
 func (p *SystemPlugin) OnReady() {
 	go p.tickLoop()
+}
+
+func (p *SystemPlugin) WaitReady(ctx context.Context) error {
+	return nil
 }
 
 func (p *SystemPlugin) OnShutdown() {}
@@ -98,14 +103,18 @@ func (p *SystemPlugin) OnEntitiesList(deviceID string, current []types.Entity) (
 	return current, nil
 }
 
-func (p *SystemPlugin) OnCommand(cmd types.Command, entity types.Entity) (types.Entity, error) {
+func (p *SystemPlugin) OnCommandTyped(req types.CommandRequest[types.GenericPayload], entity types.Entity) (types.Entity, error) {
 	// System sensors are read-only and do not support writable commands by design.
 	return entity, fmt.Errorf("commands are not supported for system sensors")
 }
 
-func (p *SystemPlugin) OnEvent(evt types.Event, entity types.Entity) (types.Entity, error) {
-	entity.Data.Reported = evt.Payload
-	entity.Data.Effective = evt.Payload
+func (p *SystemPlugin) OnEventTyped(evt types.EventTyped[types.GenericPayload], entity types.Entity) (types.Entity, error) {
+	raw, err := json.Marshal(evt.Payload)
+	if err != nil {
+		return entity, err
+	}
+	entity.Data.Reported = raw
+	entity.Data.Effective = raw
 	entity.Data.SyncStatus = "in_sync"
 	return entity, nil
 }
@@ -127,21 +136,33 @@ func (p *SystemPlugin) emitSystemEvents(now time.Time) {
 		"value": now.Format("15:04:05.000"),
 		"ts":    now.UTC().Format(time.RFC3339Nano),
 	})
-	_ = p.eventSink.EmitEvent(types.InboundEvent{DeviceID: systemDeviceID, EntityID: timeEntityID, Payload: timePayload})
+	_ = p.eventSink.EmitTypedEvent(types.InboundEventTyped[types.GenericPayload]{
+		DeviceID: systemDeviceID, EntityID: timeEntityID, Payload: rawToGeneric(timePayload),
+	})
 
 	datePayload, _ := json.Marshal(map[string]any{
 		"type":  "tick",
 		"value": now.Format("2006-01-02 15:04:05.000"),
 		"ts":    now.UTC().Format(time.RFC3339Nano),
 	})
-	_ = p.eventSink.EmitEvent(types.InboundEvent{DeviceID: systemDeviceID, EntityID: dateEntityID, Payload: datePayload})
+	_ = p.eventSink.EmitTypedEvent(types.InboundEventTyped[types.GenericPayload]{
+		DeviceID: systemDeviceID, EntityID: dateEntityID, Payload: rawToGeneric(datePayload),
+	})
 
 	cpuPayload, _ := json.Marshal(map[string]any{
 		"type":    "tick",
 		"percent": p.readCPUPercent(),
 		"ts":      now.UTC().Format(time.RFC3339Nano),
 	})
-	_ = p.eventSink.EmitEvent(types.InboundEvent{DeviceID: systemDeviceID, EntityID: cpuEntityID, Payload: cpuPayload})
+	_ = p.eventSink.EmitTypedEvent(types.InboundEventTyped[types.GenericPayload]{
+		DeviceID: systemDeviceID, EntityID: cpuEntityID, Payload: rawToGeneric(cpuPayload),
+	})
+}
+
+func rawToGeneric(raw []byte) types.GenericPayload {
+	out := types.GenericPayload{}
+	_ = json.Unmarshal(raw, &out)
+	return out
 }
 
 func entityExists(current []types.Entity, id string) bool {
