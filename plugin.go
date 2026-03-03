@@ -37,7 +37,12 @@ func NewSystemPlugin() *SystemPlugin {
 
 func (p *SystemPlugin) OnInitialize(config runner.Config, state types.Storage) (types.Manifest, types.Storage) {
 	p.eventSink = config.EventSink
-	return types.Manifest{ID: "plugin-system", Name: "System Plugin", Version: "1.0.0"}, state
+	return types.Manifest{
+		ID:      "plugin-system",
+		Name:    "System Plugin",
+		Version: "1.0.0",
+		Schemas: append(types.CoreDomains(), systemDomains()...),
+	}, state
 }
 
 func (p *SystemPlugin) OnReady() {
@@ -70,6 +75,12 @@ func (p *SystemPlugin) OnDevicesList(current []types.Device) ([]types.Device, er
 		SourceID:   systemDeviceID,
 		SourceName: "System",
 	})
+	coreDeviceID := types.CoreDeviceID("plugin-system")
+	byID[coreDeviceID] = runner.ReconcileDevice(byID[coreDeviceID], types.Device{
+		ID:         coreDeviceID,
+		SourceID:   coreDeviceID,
+		SourceName: "System Plugin",
+	})
 	out := make([]types.Device, 0, len(byID))
 	for _, d := range byID {
 		out = append(out, d)
@@ -87,6 +98,7 @@ func (p *SystemPlugin) OnEntityUpdate(ent types.Entity) (types.Entity, error) { 
 func (p *SystemPlugin) OnEntityDelete(deviceID, entityID string) error        { return nil }
 
 func (p *SystemPlugin) OnEntitiesList(deviceID string, current []types.Entity) ([]types.Entity, error) {
+	current = runner.EnsureCoreEntities("plugin-system", deviceID, current)
 	if deviceID != systemDeviceID {
 		return current, nil
 	}
@@ -103,12 +115,12 @@ func (p *SystemPlugin) OnEntitiesList(deviceID string, current []types.Entity) (
 	return current, nil
 }
 
-func (p *SystemPlugin) OnCommandTyped(req types.CommandRequest[types.GenericPayload], entity types.Entity) (types.Entity, error) {
+func (p *SystemPlugin) OnCommand(req types.Command, entity types.Entity) (types.Entity, error) {
 	// System sensors are read-only and do not support writable commands by design.
 	return entity, fmt.Errorf("commands are not supported for system sensors")
 }
 
-func (p *SystemPlugin) OnEventTyped(evt types.EventTyped[types.GenericPayload], entity types.Entity) (types.Entity, error) {
+func (p *SystemPlugin) OnEvent(evt types.Event, entity types.Entity) (types.Entity, error) {
 	raw, err := json.Marshal(evt.Payload)
 	if err != nil {
 		return entity, err
@@ -136,8 +148,8 @@ func (p *SystemPlugin) emitSystemEvents(now time.Time) {
 		"value": now.Format("15:04:05.000"),
 		"ts":    now.UTC().Format(time.RFC3339Nano),
 	})
-	_ = p.eventSink.EmitTypedEvent(types.InboundEventTyped[types.GenericPayload]{
-		DeviceID: systemDeviceID, EntityID: timeEntityID, Payload: rawToGeneric(timePayload),
+	_ = p.eventSink.EmitEvent(types.InboundEvent{
+		DeviceID: systemDeviceID, EntityID: timeEntityID, Payload: json.RawMessage(timePayload),
 	})
 
 	datePayload, _ := json.Marshal(map[string]any{
@@ -145,8 +157,8 @@ func (p *SystemPlugin) emitSystemEvents(now time.Time) {
 		"value": now.Format("2006-01-02 15:04:05.000"),
 		"ts":    now.UTC().Format(time.RFC3339Nano),
 	})
-	_ = p.eventSink.EmitTypedEvent(types.InboundEventTyped[types.GenericPayload]{
-		DeviceID: systemDeviceID, EntityID: dateEntityID, Payload: rawToGeneric(datePayload),
+	_ = p.eventSink.EmitEvent(types.InboundEvent{
+		DeviceID: systemDeviceID, EntityID: dateEntityID, Payload: json.RawMessage(datePayload),
 	})
 
 	cpuPayload, _ := json.Marshal(map[string]any{
@@ -154,15 +166,9 @@ func (p *SystemPlugin) emitSystemEvents(now time.Time) {
 		"percent": p.readCPUPercent(),
 		"ts":      now.UTC().Format(time.RFC3339Nano),
 	})
-	_ = p.eventSink.EmitTypedEvent(types.InboundEventTyped[types.GenericPayload]{
-		DeviceID: systemDeviceID, EntityID: cpuEntityID, Payload: rawToGeneric(cpuPayload),
+	_ = p.eventSink.EmitEvent(types.InboundEvent{
+		DeviceID: systemDeviceID, EntityID: cpuEntityID, Payload: json.RawMessage(cpuPayload),
 	})
-}
-
-func rawToGeneric(raw []byte) types.GenericPayload {
-	out := types.GenericPayload{}
-	_ = json.Unmarshal(raw, &out)
-	return out
 }
 
 func entityExists(current []types.Entity, id string) bool {
