@@ -23,7 +23,7 @@ import (
 
 	"github.com/slidebolt/plugin-system/app"
 	domain "github.com/slidebolt/sb-domain"
-	managersdk "github.com/slidebolt/sb-manager-sdk"
+	testkit "github.com/slidebolt/sb-testkit"
 	messenger "github.com/slidebolt/sb-messenger-sdk"
 	storage "github.com/slidebolt/sb-storage-sdk"
 )
@@ -61,9 +61,9 @@ func init() {
 
 // --- Test helpers ---
 
-func env(t *testing.T) (*managersdk.TestEnv, storage.Storage, *messenger.Commands) {
+func env(t *testing.T) (*testkit.TestEnv, storage.Storage, *messenger.Commands) {
 	t.Helper()
-	e := managersdk.NewTestEnv(t)
+	e := testkit.NewTestEnv(t)
 	e.Start("messenger")
 	e.Start("storage")
 	cmds := messenger.NewCommands(e.Messenger(), domain.LookupCommand)
@@ -536,7 +536,7 @@ func TestMixed_FullLifecycle_SaveQueryCommandHydrate(t *testing.T) {
 
 func TestSystemDevices_AutoCreatedOnStartup(t *testing.T) {
 	// When the plugin starts, it should auto-create Time and Location devices
-	e := managersdk.NewTestEnv(t)
+	e := testkit.NewTestEnv(t)
 	e.Start("messenger")
 	e.Start("storage")
 
@@ -578,7 +578,7 @@ func TestSystemDevices_AutoCreatedOnStartup(t *testing.T) {
 
 func TestSystemDevices_NoDuplication(t *testing.T) {
 	// Starting the plugin twice should not create duplicate Time/Location devices
-	e := managersdk.NewTestEnv(t)
+	e := testkit.NewTestEnv(t)
 	e.Start("messenger")
 	e.Start("storage")
 	store := e.Storage()
@@ -631,7 +631,7 @@ func TestSystemDevices_NoDuplication(t *testing.T) {
 
 func TestSystemDevices_CannotDelete(t *testing.T) {
 	// System devices are auto-recreated if deleted
-	e := managersdk.NewTestEnv(t)
+	e := testkit.NewTestEnv(t)
 	e.Start("messenger")
 	e.Start("storage")
 
@@ -674,7 +674,7 @@ func TestSystemDevices_CannotDelete(t *testing.T) {
 
 func TestSystemDevices_TimeEntities(t *testing.T) {
 	// Time device should have specific entities: timestamp, hour, minute, day, week, month, year
-	e := managersdk.NewTestEnv(t)
+	e := testkit.NewTestEnv(t)
 	e.Start("messenger")
 	e.Start("storage")
 
