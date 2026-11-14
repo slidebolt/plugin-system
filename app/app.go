@@ -35,6 +35,7 @@ func (a *App) Hello() contract.HelloResponse {
 		ContractVersion: contract.ContractVersion,
 		Definitions:     contract.DescribePlugin("System", "Publishes host time and location observations.", "location", "time"),
 		DependsOn:       []string{"messenger", "storage"},
+		Setup:           contract.RequiredSetup("Core"),
 	}
 }
 
