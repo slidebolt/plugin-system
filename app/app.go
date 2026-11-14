@@ -165,6 +165,14 @@ func (a *App) entityExists(plugin, device, id string) bool {
 func (a *App) SeedSystemDevices() error {
 	now := time.Now()
 	_, week := now.ISOWeek()
+	for _, device := range []domain.Device{
+		{ID: "time", Plugin: PluginID, Name: "System Time", Entities: []domain.Entity{}},
+		{ID: "location", Plugin: PluginID, Name: "System Location", Entities: []domain.Entity{}},
+	} {
+		if err := a.store.Save(device); err != nil {
+			return fmt.Errorf("save system device %s: %w", device.ID, err)
+		}
+	}
 
 	timeEntities := []domain.Entity{
 		{ID: "timestamp", Plugin: PluginID, DeviceID: "time", Type: "time", Name: "Timestamp", State: Time{Timestamp: now.Unix()}},

@@ -23,9 +23,9 @@ import (
 
 	"github.com/slidebolt/plugin-system/app"
 	domain "github.com/slidebolt/sb-domain"
-	testkit "github.com/slidebolt/sb-testkit"
 	messenger "github.com/slidebolt/sb-messenger-sdk"
 	storage "github.com/slidebolt/sb-storage-sdk"
+	testkit "github.com/slidebolt/sb-testkit"
 )
 
 // ==========================================================================
@@ -689,6 +689,19 @@ func TestSystemDevices_TimeEntities(t *testing.T) {
 	defer p.OnShutdown()
 
 	store := e.Storage()
+	for _, deviceID := range []string{"time", "location"} {
+		raw, err := store.Get(domain.DeviceKey{Plugin: app.PluginID, ID: deviceID})
+		if err != nil {
+			t.Fatalf("system device %q should exist: %v", deviceID, err)
+		}
+		var device domain.Device
+		if err := json.Unmarshal(raw, &device); err != nil {
+			t.Fatalf("decode system device %q: %v", deviceID, err)
+		}
+		if device.Entities == nil {
+			t.Fatalf("system device %q entities must serialize as an empty array", deviceID)
+		}
+	}
 
 	expectedEntities := []string{"timestamp", "hour", "minute", "day", "week", "month", "year"}
 
