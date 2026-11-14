@@ -14,29 +14,8 @@ import (
 
 const PluginID = "plugin-system"
 
-type Time struct {
-	Timestamp int64 `json:"timestamp"`
-	Hour      int   `json:"hour"`
-	Minute    int   `json:"minute"`
-	Day       int   `json:"day"`
-	Week      int   `json:"week"`
-	Month     int   `json:"month"`
-	Year      int   `json:"year"`
-}
-
-type Location struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Altitude  float64 `json:"altitude,omitempty"`
-	City      string  `json:"city,omitempty"`
-	Country   string  `json:"country,omitempty"`
-	Timezone  string  `json:"timezone,omitempty"`
-}
-
-func init() {
-	domain.Register("time", Time{})
-	domain.Register("location", Location{})
-}
+type Time = domain.Time
+type Location = domain.Location
 
 type App struct {
 	msg        messenger.Messenger
@@ -54,6 +33,7 @@ func (a *App) Hello() contract.HelloResponse {
 		ID:              PluginID,
 		Kind:            contract.KindPlugin,
 		ContractVersion: contract.ContractVersion,
+		Definitions:     contract.DescribePlugin("System", "Publishes host time and location observations.", "location", "time"),
 		DependsOn:       []string{"messenger", "storage"},
 	}
 }
